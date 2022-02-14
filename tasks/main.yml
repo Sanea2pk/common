@@ -30,7 +30,7 @@
     - "{{ ssh_username }}"
 
 - name: Deploy SSH keys
-  authorized_key: 
+  authorized_key:
     user: "{{ item }}"
     key: "{{ lookup('file', 'files/{{ item }}.pub') }}"
     state: present
