@@ -14,5 +14,5 @@
 
   vars:
     ssh_username: # Specify here usernames you want to create on the remote hosts.
-      - newuser21
-      - newuser22
+      - newuser
+      - reguser
