@@ -1,0 +1,161 @@
+---
+# tasks file for common
+
+- name: Generate ssh key pairs for new users
+  ansible.builtin.shell: |
+    ssh-keygen -q -t rsa -N '' -f /tmp/{{ item }} <<< y
+  with_items:
+    - "{{ ssh_username }}"
+  delegate_to: localhost
+
+- name: Copy keys to /files directory  
+  ansible.builtin.copy:
+    src: /tmp/{{ item }}.pub
+    dest: "{{ role_path }}/files/{{ item }}.pub"
+    owner: root
+    group: root
+    mode: '0606'
+  with_items:
+    - "{{ ssh_username }}"
+  delegate_to: localhost
+  become: yes
+
+- name: Create new users
+  ansible.builtin.user:
+    name: "{{ item }}"
+    shell: /bin/bash
+    state: present
+  become: yes
+  with_items:
+    - "{{ ssh_username }}"
+
+- name: Deploy SSH keys
+  authorized_key: 
+    user: "{{ item }}"
+    key: "{{ lookup('file', 'files/{{ item }}.pub') }}"
+    state: present
+  with_items:
+    - "{{ ssh_username }}"
+  become: yes
+
+- name: Creating regular user with distinct password and ssh key pair.
+  ansible.builtin.user:
+    name: "{{ item }}"
+    generate_ssh_key: yes
+    password: "{{ user_passwd }}"
+    # update_password: on_create
+    shell: /bin/bash
+    state: present
+  become: yes
+  with_items:
+    - "{{ reg_user }}"
+
+- name: Deploying a .bashrc file per user
+  ansible.builtin.template:
+    src: templates/bashrc.j2
+    dest: "/home/{{ item }}/.bashrc"
+    owner: "{{ item }}"
+    group: "{{ item }}"
+    force: yes
+  with_items:
+    - "{{ ssh_username }}"
+  become: yes
+
+- name: Limit DNS traffic to {{ dns1 }} and {{ dns2 }}
+  ini_file:
+    path: /etc/NetworkManager/NetworkManager.conf
+    state: present
+    no_extra_spaces: yes
+    section: main
+    option: dns
+    value: none
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+  notify:
+    - reload network
+
+- name: Deploy resolv.conf template
+  ansible.builtin.template:
+    src: templates/resolv.conf.j2
+    dest: /etc/resolv.conf
+    owner: root
+    group: root
+    mode: 0644
+  become: yes
+  notify:
+    - reload network
+
+- name: Ensure that iptables is installed, configured and persisted across reboots
+  ansible.builtin.yum:
+    name: 
+      - iptables-services
+      - iptables
+    state: latest
+  become: yes
+  # when: ansible_os_family == "RedHat"
+  notify:
+    - reload iptables
+
+- name: "Outbound: DNS traffic to 1.1.1.1 and 1.0.0.1"
+  ansible.builtin.iptables:
+    chain: OUTPUT
+    source: "{{ item }}"
+    protocol: tcp
+    destination_port: "{{ dns_port }}"
+    jump: ACCEPT
+  with_items:
+    - "{{ dns1 }}"
+    - "{{ dns2 }}"
+  become: yes
+  notify:
+    - save iptables
+    - reload iptables
+
+- name: "Outbound: HTTPS traffic on port 443 to anywhere"
+  ansible.builtin.iptables:
+    chain: OUTPUT
+    destination_port: "{{ https_port }}"
+    protocol: tcp
+    jump: ACCEPT
+  become: yes
+  notify:
+    - save iptables
+    - reload iptables
+
+- name: "Inbound: SSH traffic on port 22 from anywhere"
+  ansible.builtin.iptables:
+    chain: "{{ item }}"
+    protocol: tcp
+    destination_port: "{{ ssh_port }}"
+    jump: ACCEPT
+  become: yes
+  with_items:
+    - "{{ iptables_chain }}"
+  notify:
+    - save iptables
+    - reload iptables
+- name: "Inbound: related traffic to permitted outbound requests"
+  ansible.builtin.iptables:
+    chain: "{{ item }}"
+    ctstate: NEW,ESTABLISHED,RELATED
+    jump: ACCEPT
+  become: yes
+  with_items:
+    - "{{ iptables_chain }}"
+  notify:
+    - save iptables
+    - reload iptables
+    
+- name: Change iptables policys to DROP
+  ansible.builtin.iptables:
+    chain: "{{ item }}"
+    policy: DROP
+  become: yes
+  with_items:
+    - "{{ iptables_chain }}"
+  notify:
+    - save iptables
+    - reload iptables
+

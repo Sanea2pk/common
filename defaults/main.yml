@@ -1,0 +1,15 @@
+---
+# defaults file for common
+
+bashrc_path: $HOME/.local/bin:$HOME/bin:$PATH
+shell_prompt: '"[\u | \h \W]\$ "'
+
+dns1: 1.1.1.1
+dns2: 1.0.0.1
+
+https_port: 443
+ssh_port: 22
+dns_port: 53
+iptables_chain: 
+  - INPUT
+  - OUTPUT

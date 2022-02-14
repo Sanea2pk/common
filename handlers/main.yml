@@ -1,0 +1,21 @@
+---
+# handlers file for common
+
+- name: reload network
+  service:
+    name: NetworkManager
+    state: restarted
+  become: yes
+  
+- name: save iptables
+  community.general.iptables_state:
+    state: saved
+    path: /etc/sysconfig/iptables
+  become: yes
+
+- name: reload iptables
+  service:
+    name: iptables.service
+    state: restarted
+  become: yes
+
