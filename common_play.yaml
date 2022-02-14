@@ -13,6 +13,8 @@
     - common
 
   vars:
-    ssh_username: # Specify here usernames you want to create on the remote hosts.
+    new_users: # Specify here usernames you want to create on the remote hosts.
       - newuser
+      
+    regular_user:
       - reguser
