@@ -1,0 +1,20 @@
+---
+
+- hosts: webservers
+
+  vars_prompt:
+  - name: user_passwd
+    prompt: Enter regular user password
+    private: yes
+    confirm: yes
+    encrypt: sha512_crypt
+    
+  roles: 
+    - common
+
+  vars:
+    ssh_username:
+      - newuser21
+      - newuser22
+    reg_user:
+      - reguser23
