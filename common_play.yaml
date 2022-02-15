@@ -1,6 +1,6 @@
 ---
 
-- hosts: webservers
+- hosts: webservers:bastion_server
 
   vars_prompt:
   - name: user_passwd

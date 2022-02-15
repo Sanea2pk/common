@@ -34,7 +34,6 @@
 - name: Creating regular user with password and ssh key pair.
   ansible.builtin.user:
     name: "{{ item }}"
-    generate_ssh_key: yes
     password: "{{ user_passwd }}"
     # update_password: on_create
     shell: /bin/bash
