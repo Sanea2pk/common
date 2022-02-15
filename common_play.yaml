@@ -1,6 +1,6 @@
 ---
 
-- hosts: webservers:bastion_server
+- hosts: servers:bastion_server
 
   vars_prompt:
   - name: user_passwd
@@ -8,13 +8,14 @@
     private: yes
     confirm: yes
     encrypt: sha512_crypt
-    
+
   roles: 
     - common
 
   vars:
-    new_users: # Specify here usernames you want to create on the remote hosts.
-      - newuser
-      
+    login_users:
+      - bob
+      - alan
+
     regular_user:
       - reguser

@@ -1,56 +1,65 @@
 ---
 # tasks file for common
 
-- name: Generate ssh key pairs for new users
-  ansible.builtin.shell: |
-    ssh-keygen -q -t rsa -N '' -f /tmp/{{ item }} <<< y
-  with_items:
-    - "{{ new_users }}"
-    - "{{ regular_user }}"
-  delegate_to: localhost
+- name: Register host with variable
+  ansible.builtin.add_host:
+   name: "share_variable"
+   default_key: default_key
+   regular_user_key: regular_user_key
 
-- name: Copy keys to /files directory
-  ansible.builtin.copy:
-    src: /tmp/{{ item }}.pub
-    dest: "{{ role_path }}/files/{{ item }}.pub"
-    owner: root
-    group: root
-    mode: '0606'
-  with_items:
-    - "{{ new_users }}"
-    - "{{ regular_user }}"
-  delegate_to: localhost
-  become: yes
-
-- name: Create new users
+- name: Assume we have some users on remote hosts
   ansible.builtin.user:
     name: "{{ item }}"
     shell: /bin/bash
     state: present
   become: yes
   with_items:
-    - "{{ new_users }}"
+    - "{{ login_users }}"
+
+- name: Generate an OpenSSH rsa keypair (2048 bits)
+  community.crypto.openssh_keypair:
+    path: /tmp/ssh_keys/{{ item }}
+    size: 2048
+  delegate_to: localhost
+  with_items:
+    - "{{ hostvars.share_variable.default_key }}"
+    - "{{ hostvars.share_variable.regular_user_key }}"
+
+- name: Deploy users public keys
+  ansible.builtin.authorized_key:
+    user: "{{ item }}"
+    key: "{{ lookup('file', '/tmp/ssh_keys/{{ hostvars.share_variable.default_key }}.pub') }}"
+  with_items:
+    - "{{ login_users }}"
+  become: yes
 
 - name: Creating regular user with password and ssh key pair.
   ansible.builtin.user:
     name: "{{ item }}"
     password: "{{ user_passwd }}"
-    # update_password: on_create
     shell: /bin/bash
     state: present
   become: yes
   with_items:
     - "{{ regular_user }}"
 
-- name: Deploy SSH keys
-  authorized_key:
+- name: authorized_key
+  ansible.builtin.authorized_key:
     user: "{{ item }}"
-    key: "{{ lookup('file', 'files/{{ item }}.pub') }}"
-    state: present
+    key: "{{ lookup('file', '/tmp/ssh_keys/{{ hostvars.share_variable.regular_user_key }}.pub') }}"
   with_items:
-    - "{{ new_users }}"
     - "{{ regular_user }}"
   become: yes
+
+- name: Copy private keys to bastion host
+  ansible.builtin.copy:
+    src: /tmp/ssh_keys/{{ hostvars.share_variable.default_key }}
+    dest: /tmp/ssh_keys/
+    owner: root
+    group: root
+    mode: '0400'
+  become: yes
+  when: "'bastion_server' in {{ group_names }}"
 
 - name: Deploying a .bashrc file per user
   ansible.builtin.template:
@@ -60,7 +69,7 @@
     group: "{{ item }}"
     force: yes
   with_items:
-    - "{{ new_users }}"
+    - "{{ login_users }}"
     - "{{ regular_user }}"
   become: yes
 
