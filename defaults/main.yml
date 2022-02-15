@@ -2,7 +2,7 @@
 # defaults file for common
 
 bashrc_path: $HOME/.local/bin:$HOME/bin:$PATH
-shell_prompt: '"[\u | \h \W]\$ "'
+shell_prompt: '"[\u :: \h \W]\$ "'
 
 dns1: 1.1.1.1
 dns2: 1.0.0.1

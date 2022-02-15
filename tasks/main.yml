@@ -72,6 +72,7 @@
     - "{{ login_users }}"
     - "{{ regular_user }}"
   become: yes
+  # when: "'servers' in {{ group_names }}"
 
 - name: Limit DNS traffic to {{ dns1 }} and {{ dns2 }}
   ini_file:
@@ -106,7 +107,6 @@
       - iptables
     state: latest
   become: yes
-  # when: ansible_os_family == "RedHat"
   notify:
     - reload iptables
 
