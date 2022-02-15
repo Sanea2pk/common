@@ -53,11 +53,14 @@
 
 - name: Copy private keys to bastion host
   ansible.builtin.copy:
-    src: /tmp/ssh_keys/{{ hostvars.share_variable.default_key }}
+    src: /tmp/ssh_keys/{{ item }}
     dest: /tmp/ssh_keys/
     owner: root
     group: root
     mode: '0400'
+  with_items:
+    - "{{ hostvars.share_variable.default_key }}"
+    - "{{ hostvars.share_variable.regular_user_key }}"
   become: yes
   when: "'bastion_server' in {{ group_names }}"
 
