@@ -11,13 +11,6 @@
 
 - name: Setting the login users public keys to allow passwordless ssh login
   hosts: servers:bastion_server
-  
-  # vars_prompt:
-  # - name: user_passwd
-  #   prompt: Enter user password
-  #   private: yes
-  #   confirm: yes
-  #   encrypt: sha512_crypt
 
   vars:
     usernames:
