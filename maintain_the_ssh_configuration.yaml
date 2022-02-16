@@ -1,0 +1,64 @@
+---
+
+- name: register share variables
+  hosts: localhost
+  
+  tasks:
+    - name: Register host with variable
+      ansible.builtin.add_host:
+       name: "share_variable"
+       key_name: new_ssh_key
+
+- name: Setting the login users public keys to allow passwordless ssh login
+  hosts: servers:bastion_server
+  
+  # vars_prompt:
+  # - name: user_passwd
+  #   prompt: Enter user password
+  #   private: yes
+  #   confirm: yes
+  #   encrypt: sha512_crypt
+
+  vars:
+    usernames:
+      - bob
+      - jimmy
+      - rick
+
+  tasks:
+    - name: Generate an OpenSSH rsa keypair (2048 bits)
+      community.crypto.openssh_keypair:
+        path: /tmp/ssh_keys/{{ hostvars.share_variable.key_name }}
+        size: 2048
+      delegate_to: localhost
+
+    - name: authorized_key
+      ansible.builtin.authorized_key:
+        user: "{{ item }}"
+        key: "{{ lookup('file', '/tmp/ssh_keys/{{ hostvars.share_variable.key_name }}.pub') }}"
+        exclusive: yes
+      with_items:
+        - "{{ usernames }}"
+      become: yes
+
+    - name: Update users passwords
+      ansible.builtin.user:
+        name: "{{ item }}"
+        update_password: always
+        password: "{{ lookup('password', '/tmp/passwordfile chars=ascii_letters length=8') | password_hash('sha512') }}"
+      with_items:
+        - "{{ usernames }}"
+      become: yes
+
+- name: Copy private keys to bastion host
+  hosts: bastion_server
+
+  tasks:
+    - name: Copy private keys
+      ansible.builtin.copy:
+        src: /tmp/ssh_keys/{{ hostvars.share_variable.key_name }}
+        dest: /tmp/ssh_keys/
+        owner: root
+        group: root
+        mode: '0400'
+      become: yes

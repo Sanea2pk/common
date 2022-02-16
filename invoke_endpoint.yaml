@@ -1,0 +1,21 @@
+---
+
+- name: Invoke some endpoint
+  hosts: webservers
+  
+  vars:
+    some_link: https://ifconfig.co/
+    dest_dir: /tmp/
+
+  tasks:
+
+    - name: POST from contents of local file
+      ansible.builtin.uri:
+        url: "{{ some_link }}"
+        method: GET
+        dest: "{{ dest_dir }}/output.txt"
+
+    - name: Fetch file from remote hosts
+      ansible.builtin.fetch:
+        src: "{{ dest_dir }}/output.txt"
+        dest: "{{ dest_dir }}"
